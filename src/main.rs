@@ -1,9 +1,12 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use actix_web::{
-    http::header,
+    http::{
+        header::{self, ContentType},
+        StatusCode,
+    },
     web::{self},
-    App, HttpServer, Responder,
+    App, HttpResponse, HttpServer, Responder,
 };
 use rand::Rng;
 
@@ -18,7 +21,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(InMemoryDB {
                 url_kv: Mutex::new(HashMap::new()),
             }))
-            .route("/", web::get().to(index))
+            .route("/", web::get().to(list))
             .route("/s", web::get().to(shorten))
             .route("/r/{id}", web::get().to(redirect))
     })
@@ -58,6 +61,34 @@ async fn redirect(id: web::Path<String>, data: web::Data<InMemoryDB>) -> impl Re
     }
 }
 
-async fn index() -> &'static str {
-    "Hello URL Shortener!"
+async fn list(data: web::Data<InMemoryDB>) -> impl Responder {
+    let mut result = String::new();
+    result.push_str("<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css' integrity='sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls' crossorigin='anonymous'>");
+    result.push_str("<div style='margin: 2em auto; width: 40em; max-width: 100%;'>");
+    result.push_str("<h1>List of all URLs</h1>");
+    result.push_str("<table class='pure-table' style='width: 100%;'>");
+    result.push_str("<thead><tr><th>Key</th><th>URL</th><th>Go to</th></tr><thead>");
+    result.push_str("<tbody>");
+    for (key, value) in data.url_kv.lock().unwrap().iter() {
+        result.push_str("<tr>");
+        result.push_str("<td>");
+        result.push_str(key);
+        result.push_str("</td>");
+        result.push_str("<td>");
+        result.push_str(value);
+        result.push_str("</td>");
+        result.push_str("<td>");
+        result.push_str(&format!(
+            "<a target='blank' href='http://localhost:8080/r/{}'>Click here</a>",
+            key
+        ));
+        result.push_str("</td>");
+        result.push_str("</tr>");
+    }
+    result.push_str("</tbody>");
+    result.push_str("</table>");
+    result.push_str("</div>");
+    HttpResponse::build(StatusCode::OK)
+        .content_type(ContentType::html())
+        .body(result)
 }
