@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex, io, path::Path, fs::File,io::Write};
 
 use actix_web::{
     http::{
@@ -12,15 +12,40 @@ use rand::Rng;
 
 struct InMemoryDB {
     url_kv: std::sync::Mutex<HashMap<String, String>>,
+    file_path: String,
+}
+impl InMemoryDB {
+    fn new(file_path: &str) -> io::Result<Self> {
+        let db = InMemoryDB {
+            url_kv: Mutex::new(HashMap::new()),
+            file_path: file_path.to_string(),
+        };
+        if Path::new(file_path).exists() {
+            let file = File::open(file_path)?;
+            let data: HashMap<String, String> = serde_json::from_reader(file)?;
+            *db.url_kv.lock().unwrap() = data;
+         }
+        Ok(db)
+    }
+
+    fn save_to_file(&self) -> io::Result<()> {
+        let file = File::create(&self.file_path)?;
+        let data = self.url_kv.lock().unwrap();
+        let json = serde_json::to_string(&data.clone())?;
+        let mut writer = io::BufWriter::new(file);
+        writer.write_all(json.as_bytes())?;
+        writer.flush()?;
+        Ok(())
+    }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
-            .app_data(web::Data::new(InMemoryDB {
-                url_kv: Mutex::new(HashMap::new()),
-            }))
+            .app_data(web::Data::new(
+                InMemoryDB::new("database.json").unwrap()
+            ))
             .route("/", web::get().to(list))
             .route("/shorten", web::post().to(shorten))
             .route("/r/{id}", web::get().to(redirect))
@@ -48,7 +73,7 @@ async fn shorten(payload: web::Form<FormContent>, data: web::Data<InMemoryDB>) -
         .lock()
         .unwrap()
         .insert(random_key.clone(), payload.url.clone());
-
+    data.save_to_file().unwrap();
     // redirect to the homepage 301
     HttpResponse::MovedPermanently()
         .append_header((header::LOCATION, "/"))
