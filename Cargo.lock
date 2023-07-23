@@ -1017,6 +1017,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "shortrs"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "askama",
+ "rand",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1212,17 +1223,6 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
-]
-
-[[package]]
-name = "url_shortener"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "askama",
- "rand",
- "serde",
- "serde_json",
 ]
 
 [[package]]
