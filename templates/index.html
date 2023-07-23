@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>List of all URLs</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css"
+      integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div style="margin: 2em auto; width: 40em; max-width: 100%">
+      <h1>List of all URLs</h1>
+      <table class="pure-table" style="width: 100%">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>URL</th>
+            <th>Go to</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for (key, value) in data %}
+          <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+            <td><a target="blank" href="http://localhost:8080/r/{{ key }}">Click here</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <h2 style="margin-top: 3em">Shorten a new URL</h2>
+      <form class="pure-form" action="/shorten" method="post">
+        <fieldset>
+          <input type="text" name="url" placeholder="URL" style="width: 100%" />
+          <button type="submit" style="margin-top: 1rem" class="pure-button pure-button-primary">Shorten</button>
+        </fieldset>
+      </form>
+    </div>
+  </body>
+</html>
