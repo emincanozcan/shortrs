@@ -22,7 +22,7 @@ async fn main() -> std::io::Result<()> {
                 url_kv: Mutex::new(HashMap::new()),
             }))
             .route("/", web::get().to(list))
-            .route("/s", web::get().to(shorten))
+            .route("/shorten", web::post().to(shorten))
             .route("/r/{id}", web::get().to(redirect))
     })
     .bind(("127.0.0.1", 8080))?
@@ -31,10 +31,11 @@ async fn main() -> std::io::Result<()> {
 }
 
 #[derive(serde::Deserialize)]
-struct UrlQuery {
+struct FormContent {
     url: String,
 }
-async fn shorten(info: web::Query<UrlQuery>, data: web::Data<InMemoryDB>) -> String {
+// Payload is the form data contains shorten parameter
+async fn shorten(payload: web::Form<FormContent>, data: web::Data<InMemoryDB>) -> impl Responder {
     // create random 4 character string
     let random_key: String = rand::thread_rng()
         .sample_iter(&rand::distributions::Alphanumeric)
@@ -46,10 +47,12 @@ async fn shorten(info: web::Query<UrlQuery>, data: web::Data<InMemoryDB>) -> Str
     data.url_kv
         .lock()
         .unwrap()
-        .insert(random_key.clone(), info.url.clone());
+        .insert(random_key.clone(), payload.url.clone());
 
-    let result = format!("http://localhost:8080/r/{}", random_key);
-    result
+    // redirect to the homepage 301
+    HttpResponse::MovedPermanently()
+        .append_header((header::LOCATION, "/"))
+        .finish()
 }
 
 async fn redirect(id: web::Path<String>, data: web::Data<InMemoryDB>) -> impl Responder {
@@ -87,6 +90,13 @@ async fn list(data: web::Data<InMemoryDB>) -> impl Responder {
     }
     result.push_str("</tbody>");
     result.push_str("</table>");
+    result.push_str("<h2 style='margin-top: 3em'>Shorten a new URL</h2>");
+    result.push_str("<form class='pure-form' action='/shorten' method='post'>");
+    result.push_str("<fieldset>");
+    result.push_str("<input type='text' name='url' placeholder='URL' style='width: 100%;' />");
+    result.push_str("<button type='submit' style='margin-top: 1rem;' class='pure-button pure-button-primary'>Shorten</button>");
+    result.push_str("</fieldset>");
+    result.push_str("</form>");
     result.push_str("</div>");
     HttpResponse::build(StatusCode::OK)
         .content_type(ContentType::html())
